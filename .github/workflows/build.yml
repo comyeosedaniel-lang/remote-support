@@ -1,0 +1,46 @@
+name: build
+
+# 태그(v1.0.0 등) 푸시 시 또는 수동 실행 시 exe 를 빌드해 아티팩트로 업로드.
+# SignPath 등 코드서명은 이 CI 산출물을 대상으로 진행한다.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: python -m pip install -r requirements.txt pyinstaller
+
+      # 릴레이 주소는 저장소 시크릿(RELAY_URL)이 있을 때만 config.py 로 주입.
+      # (공개 소스에는 주소가 들어가지 않는다)
+      - name: Configure relay (optional)
+        env:
+          RELAY_URL: ${{ secrets.RELAY_URL }}
+        run: |
+          if ($env:RELAY_URL) {
+            "RELAY_URL = '$env:RELAY_URL'" | Out-File -Encoding utf8 config.py
+            Write-Host "config.py written from secret"
+          } else {
+            Write-Host "no RELAY_URL secret; building without relay URL"
+          }
+        shell: pwsh
+
+      - name: Build executables
+        run: ./build.ps1
+        shell: pwsh
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: RemoteSupport-windows
+          path: dist/*.exe
+          if-no-files-found: error
