@@ -92,3 +92,12 @@ RELAY_URL = "wss://YOUR-DOMAIN/relay"
 
 이 프로그램은 **고객이 접속 코드를 직접 알려주고, 화면에 항상 상태 창이 떠 있는**
 동의 기반 원격 지원용입니다. 몰래 실행되거나 백신을 우회하는 형태로 만들지 않습니다.
+
+## 라이선스
+
+**GNU AGPLv3** — 전체 라이선스는 [`LICENSE`](LICENSE) 파일 참고.
+Copyright (C) 2026 comyeosedaniel-lang
+
+> 이 프로그램은 `aiortc → PyAV`를 통해 **FFmpeg(GPL 빌드, libx264/libx265 포함)** 를 번들합니다.
+> 그래서 배포본 전체를 GPL 계열(AGPLv3)로 제공하며, 전체 소스는 이 저장소에 공개되어 있습니다.
+> (참고: FFmpeg 의 H.264/H.265 코덱은 특허 대상일 수 있습니다. 화면 전송은 JPEG 타일을 사용합니다.)
