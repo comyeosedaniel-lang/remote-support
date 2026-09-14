@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AS 도구 모음</title>
+<style>
+  :root{
+    --bg:#efe6d6; --bg2:#e7dbc5; --panel:#f7f1e6; --card:#fcf8f0;
+    --fg:#453a2c; --sub:#9c8b74; --line:#e6dbc6;
+    --acc:#bd8f5d; --acc2:#a4703f; --ok:#8c9c68; --warn:#c67c5f;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Malgun Gothic',system-ui,sans-serif;color:var(--fg);
+       background:radial-gradient(1300px 900px at 18% -12%, #f6efe0, var(--bg));min-height:100vh}
+  .wrap{max-width:980px;margin:0 auto;padding:20px}
+  .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+  .top h1{font-size:20px;margin:0;color:var(--acc2);flex:0 0 auto}
+  .search{flex:1 1 220px;background:var(--card);border:1px solid var(--line);border-radius:10px;
+          padding:10px 14px;font-size:14px;color:var(--fg)}
+  .search:focus{outline:2px solid var(--acc)}
+  .btn{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 16px;
+       font-size:13px;font-weight:700;color:var(--fg);cursor:pointer}
+  .btn:hover{border-color:var(--acc)}
+  .btn.pri{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff8ee;border:none}
+  .cats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+  .chip{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 14px;
+        font-size:13px;color:var(--sub);cursor:pointer}
+  .chip.on{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff8ee;border-color:transparent;font-weight:700}
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);
+        border-radius:12px;overflow:hidden;box-shadow:0 6px 20px #5a3c1e12}
+  th{background:var(--panel);text-align:left;font-size:12px;color:var(--sub);padding:10px 14px;
+     border-bottom:1px solid var(--line)}
+  td{padding:11px 14px;border-bottom:1px solid var(--line);font-size:14px;vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  .catbadge{display:inline-block;background:var(--panel);color:var(--acc2);font-size:11px;
+            font-weight:700;padding:3px 9px;border-radius:999px;white-space:nowrap}
+  .nm{font-weight:700;cursor:pointer;color:var(--fg)}
+  .nm:hover{color:var(--acc2);text-decoration:underline}
+  .desc{color:var(--sub);font-size:13px}
+  .url{color:var(--sub);font-size:12px;word-break:break-all}
+  .edit{cursor:pointer;color:var(--acc2);font-size:12px;font-weight:700;white-space:nowrap}
+  .edit:hover{text-decoration:underline}
+  .muted{color:var(--sub);text-align:center;padding:30px}
+  .modal-overlay{position:fixed;inset:0;background:rgba(40,28,14,.35);display:none;
+                 align-items:center;justify-content:center;z-index:50}
+  .modal-box{background:var(--card);border-radius:16px;box-shadow:0 20px 60px rgba(40,28,14,.35);
+             padding:24px 26px;width:420px;max-width:92vw}
+  .modal-box h3{margin:0 0 16px;font-size:17px;color:var(--acc2)}
+  .modal-box label{display:block;font-size:12px;color:var(--sub);margin:12px 0 5px}
+  .modal-box input,.modal-box textarea{width:100%;background:var(--panel);border:1px solid var(--line);
+      border-radius:8px;padding:9px 12px;font-size:14px;color:var(--fg);font-family:inherit}
+  .modal-box textarea{resize:vertical;min-height:60px}
+  .modal-actions{display:flex;gap:8px;margin-top:18px}
+  .err{color:var(--warn);font-size:13px;margin-top:8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <h1>🧰 AS 도구 모음</h1>
+    <input class="search" id="q" placeholder="이름·설명·주소로 검색…" oninput="load()">
+    <button class="btn pri" onclick="openAdd()">+ 추가</button>
+  </div>
+  <div class="cats" id="cats"></div>
+  <table>
+    <thead><tr><th style="width:90px">분류</th><th>이름 / 설명</th><th style="width:60px"></th></tr></thead>
+    <tbody id="tbody"><tr><td colspan="3" class="muted">불러오는 중…</td></tr></tbody>
+  </table>
+</div>
+
+<div class="modal-overlay" id="modal" onclick="if(event.target===this)closeModal()">
+  <div class="modal-box" id="modalbox"></div>
+</div>
+
+<script>
+  function $(s){ return document.querySelector(s); }
+  function esc(s){ return (s==null?'':String(s)).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+  async function api(name, ...args){
+    const r = await fetch('/api/'+name, {method:'POST', body: JSON.stringify(args)});
+    const j = await r.json();
+    return j.result;
+  }
+
+  let curCat = '';
+
+  async function loadCats(){
+    const cats = await api('categories') || [];
+    let h = '<div class="chip'+(curCat===''?' on':'')+'" onclick="selectCat(\'\')">전체</div>';
+    h += cats.map(c => '<div class="chip'+(curCat===c.name?' on':'')+'" onclick="selectCat(\''+esc(c.name).replace(/'/g,"\\'")+'\')">'
+        + esc(c.name) + ' <span style="opacity:.6">' + c.count + '</span></div>').join('');
+    $('#cats').innerHTML = h;
+  }
+
+  function selectCat(c){ curCat = c; loadCats(); load(); }
+
+  async function load(){
+    const q = $('#q').value;
+    const rows = await api('list_tools', q, curCat) || [];
+    if(!rows.length){ $('#tbody').innerHTML = '<tr><td colspan="3" class="muted">결과가 없습니다.</td></tr>'; return; }
+    $('#tbody').innerHTML = rows.map(r =>
+      '<tr>'
+      + '<td><span class="catbadge">'+esc(r.category)+'</span></td>'
+      + '<td><div class="nm" onclick="go('+r.id+',\''+esc(r.url).replace(/'/g,"\\'")+'\')">'+esc(r.name)+'</div>'
+        + (r.desc ? '<div class="desc">'+esc(r.desc)+'</div>' : '')
+        + (r.url ? '<div class="url">'+esc(r.url)+'</div>' : '')
+      + '</td>'
+      + '<td><span class="edit" onclick="openEdit('+r.id+')">수정</span></td>'
+      + '</tr>').join('');
+  }
+
+  async function go(id, url){
+    if(!url){ openEdit(id); return; }
+    await api('open_url', url);
+  }
+
+  function openAdd(){
+    $('#modalbox').innerHTML =
+      '<h3>도구/사이트 추가</h3>'
+      + '<label>분류</label><input id="m_cat" placeholder="예: 드라이버, 진단·점검, 커뮤니티…">'
+      + '<label>이름</label><input id="m_name" placeholder="예: 3DP Chip">'
+      + '<label>주소(URL)</label><input id="m_url" placeholder="https://...">'
+      + '<label>설명</label><textarea id="m_desc" placeholder="한 줄 설명"></textarea>'
+      + '<div class="modal-actions">'
+        + '<button class="btn pri" onclick="save(null)">저장</button>'
+        + '<button class="btn" onclick="closeModal()">취소</button>'
+      + '</div><div class="err" id="m_err"></div>';
+    $('#modal').style.display = 'flex';
+  }
+
+  async function openEdit(id){
+    const rows = await api('list_tools', '', '') || [];
+    const r = rows.find(x => x.id === id);
+    if(!r) return;
+    $('#modalbox').innerHTML =
+      '<h3>도구/사이트 수정</h3>'
+      + '<label>분류</label><input id="m_cat" value="'+esc(r.category)+'">'
+      + '<label>이름</label><input id="m_name" value="'+esc(r.name)+'">'
+      + '<label>주소(URL)</label><input id="m_url" value="'+esc(r.url)+'" placeholder="https://...">'
+      + '<label>설명</label><textarea id="m_desc">'+esc(r.desc)+'</textarea>'
+      + '<div class="modal-actions">'
+        + '<button class="btn pri" onclick="save('+id+')">저장</button>'
+        + '<button class="btn" onclick="del('+id+')" style="color:var(--warn)">삭제</button>'
+        + '<button class="btn" onclick="closeModal()">취소</button>'
+      + '</div><div class="err" id="m_err"></div>';
+    $('#modal').style.display = 'flex';
+  }
+
+  async function save(id){
+    const cat = $('#m_cat').value, name = $('#m_name').value,
+          url = $('#m_url').value, desc = $('#m_desc').value;
+    const r = id ? await api('update_tool', id, cat, name, url, desc)
+                 : await api('add_tool', cat, name, url, desc);
+    if(r && r.error){ $('#m_err').textContent = r.error; return; }
+    closeModal(); await loadCats(); await load();
+  }
+
+  async function del(id){
+    if(!confirm('삭제할까요?')) return;
+    await api('delete_tool', id);
+    closeModal(); await loadCats(); await load();
+  }
+
+  function closeModal(){ $('#modal').style.display = 'none'; }
+
+  loadCats();
+  load();
+</script>
+</body>
+</html>

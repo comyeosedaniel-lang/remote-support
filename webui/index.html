@@ -1,0 +1,988 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>AS Studio</title>
+<link rel="icon" href="/favicon.ico">
+<link rel="apple-touch-icon" href="/icon.png">
+<style>
+  :root{
+    /* ☕ 카페 라떼 — 흐린 커피색, 밝고 편안한 톤 */
+    --bg:#efe6d6; --bg2:#e7dbc5; --panel:#f7f1e6; --card:#fcf8f0;
+    --fg:#453a2c; --sub:#9c8b74; --line:#e6dbc6;
+    --acc:#bd8f5d; --acc2:#a4703f; --ok:#8c9c68; --warn:#c67c5f; --amber:#d3a457;
+    --ink:#5f5140;                 /* 로그/모노 텍스트용 진한 갈색 */
+    --shadow:0 6px 20px rgba(150,120,80,.10);
+  }
+  *{box-sizing:border-box;-webkit-user-select:none;user-select:none}
+  html,body{height:100%;margin:0}
+  body{font-family:'Malgun Gothic',system-ui,sans-serif;color:var(--fg);display:flex;overflow:hidden;
+       background:radial-gradient(1300px 900px at 18% -12%, #f6efe0, var(--bg))}
+  /* 사이드바 (대메뉴) */
+  .side{width:220px;flex:0 0 220px;background:linear-gradient(180deg,#ece0ca,#e3d4ba);
+        border-right:1px solid var(--line);display:flex;flex-direction:column;padding:20px 12px}
+  .brand{display:flex;align-items:center;gap:10px;padding:6px 8px 16px;font-weight:800;font-size:17px}
+  .brand .dot{width:28px;height:28px;border-radius:9px;box-shadow:0 3px 8px rgba(164,112,63,.35);color:#fff8ee;
+    background:linear-gradient(135deg,var(--acc),var(--acc2));display:flex;align-items:center;justify-content:center}
+  .brand .dot .lu{width:17px;height:17px}
+  .nav{display:flex;flex-direction:column;gap:2px;overflow:auto}
+  .nav .grp{font-size:10.5px;font-weight:700;color:#a8977d;letter-spacing:.5px;padding:13px 12px 5px}
+  .nav button{display:flex;align-items:center;gap:11px;background:transparent;border:0;color:#7c6d58;
+    font:inherit;font-size:14px;text-align:left;padding:10px 12px;border-radius:11px;cursor:pointer;transition:.15s}
+  .nav button:hover{background:#5a3c1e0f;color:var(--fg)}
+  .nav button.on{background:linear-gradient(135deg,#bd8f5d33,#a4703f24);color:#4a3826;
+    box-shadow:inset 0 0 0 1px #bd8f5d66}
+  .lu{width:18px;height:18px;flex:0 0 auto}
+  .nav button .lu{opacity:.8}
+  .nav button.on .lu{opacity:1;color:var(--acc2)}
+  .side .foot{margin-top:auto;color:#ab9a80;font-size:11.5px;padding:10px 8px 2px}
+  /* 사이드바 아코디언 소메뉴 (대메뉴 밑으로 펼침/접힘 · 계단식) */
+  .nav button .chev{margin-left:auto;display:flex;opacity:.45;transition:transform .22s,opacity .2s}
+  .nav button .chev .lu{width:15px;height:15px}
+  .nav button.exp .chev{transform:rotate(90deg);opacity:.85}
+  .navsub{overflow:hidden;max-height:0;transition:max-height .28s ease;box-sizing:border-box;
+    margin:3px 3px 8px 20px;border-radius:11px;background:linear-gradient(180deg,#d9c5a1,#d2bc93);
+    border-left:3px solid var(--acc2);padding:0 7px;box-shadow:inset 0 1px 3px rgba(90,60,30,.10)}
+  .navsub.open{max-height:560px;padding:6px 7px}
+  .subitem{display:block;width:100%;text-align:left;background:transparent;border:0;color:#6b5941;
+    font:inherit;font-size:12.5px;padding:7px 11px;border-radius:8px;cursor:pointer;transition:.12s}
+  .subitem:hover{background:#ffffff70;color:var(--fg)}
+  .subitem.on{color:var(--acc2);font-weight:800;background:#fff8ee;box-shadow:0 1px 5px rgba(150,120,80,.18)}
+  /* 대메뉴는 소메뉴보다 진하게(계층 구분) */
+  .nav>button[data-p]{font-weight:600}
+  /* 전체 메뉴 복귀 버튼 + 포커스(클릭한 대메뉴만, 나머지 숨김) */
+  .navback{display:none;align-items:center;gap:7px;background:#fff8ee;border:1px solid var(--line);color:var(--acc2);
+    font:inherit;font-size:12.5px;font-weight:700;text-align:left;padding:8px 12px;border-radius:10px;cursor:pointer;margin-bottom:6px}
+  .navback:hover{background:#fff;border-color:var(--acc)}
+  .nav.focus .navback{display:flex}
+  .nav.focus>button[data-p]:not(.on){display:none}
+  .nav.focus>.grp{display:none}
+  .nav.focus>.navsub:not(.open){display:none}
+  /* 콘텐츠 */
+  .main{flex:1;min-width:0;display:flex;flex-direction:column}
+  .top{height:58px;flex:0 0 58px;border-bottom:1px solid var(--line);display:flex;align-items:center;
+       padding:0 24px;gap:12px;background:#fbf6ec99}
+  .top h1{font-size:16px;margin:0;font-weight:700;flex:0 0 auto}
+  .top h1 .crumb{color:var(--sub);font-weight:600}
+  .topsearch{flex:1;max-width:420px;font-size:13.5px;padding:9px 13px}
+  .toolgrid{display:flex;flex-direction:column;gap:8px;max-width:860px}
+  .toolgrid .btn{width:100%;justify-content:flex-start;padding:12px 16px}
+  .top .pill{margin-left:auto;font-size:12px;color:var(--sub);background:#5a3c1e0a;border:1px solid var(--line);
+    padding:6px 12px;border-radius:20px}
+  .body{flex:1;overflow:auto;padding:24px}
+  .panel{display:none;animation:fade .2s ease}
+  .panel.on{display:block}
+  .subview{display:none}
+  .subview.on{display:block;animation:fade .18s ease}
+  /* 복구 포커스 카드 */
+  .rpcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:24px;
+    box-shadow:var(--shadow);max-width:560px}
+  .rpcard .rpi{font-size:30px;margin-bottom:8px;line-height:1}
+  .rpcard h3{margin:0 0 8px;font-size:19px}
+  .rpcard p{margin:0 0 18px;color:var(--sub);font-size:14px;line-height:1.6}
+  .adm{display:inline-block;margin-left:6px;font-size:11px;color:#a3543b;font-weight:700;
+    background:#c67c5f1e;border:1px solid #c67c5f44;border-radius:12px;padding:1px 8px;vertical-align:middle}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  /* 공통 */
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px;box-shadow:var(--shadow)}
+  .row{display:flex;gap:14px;flex-wrap:wrap}
+  h2.sec{font-size:15px;color:#8a7862;font-weight:700;margin:26px 0 12px}
+  .btn{background:var(--card);color:var(--fg);border:1px solid var(--line);border-radius:11px;
+    padding:11px 16px;font:inherit;font-size:14px;cursor:pointer;transition:.15s;display:inline-flex;gap:8px;align-items:center}
+  .btn:hover{border-color:var(--acc);transform:translateY(-1px);box-shadow:var(--shadow)}
+  .btn.pri{background:linear-gradient(135deg,var(--acc),var(--acc2));border:0;color:#fff8ee;font-weight:700;
+    box-shadow:0 5px 14px rgba(164,112,63,.32)}
+  .btn.warn{background:#c67c5f1e;border-color:#c67c5f66;color:#a3543b}
+  .btn:disabled{opacity:.45;cursor:default;transform:none;box-shadow:none}
+  input.txt{background:#fffdf8;border:1px solid var(--line);border-radius:11px;color:var(--fg);
+    padding:12px 14px;font:inherit;font-size:15px;outline:none}
+  input.txt:focus{border-color:var(--acc);box-shadow:0 0 0 3px #bd8f5d22}
+  .muted{color:var(--sub);font-size:13px}
+  /* 대시보드 */
+  .hello{font-size:26px;font-weight:800;margin:0 0 6px}
+  .quick{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0}
+  .qcard{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;cursor:pointer;
+    transition:.15s;box-shadow:var(--shadow)}
+  .qcard:hover{transform:translateY(-2px);border-color:var(--acc)}
+  .qcard .qi{font-size:26px}
+  .qcard h3{margin:10px 0 4px;font-size:16px}
+  .qcard p{margin:0;color:var(--sub);font-size:13px}
+  #histbox{white-space:pre-wrap;font-family:Consolas,monospace;font-size:12.5px;color:var(--ink);
+    max-height:280px;overflow:auto}
+  /* 원격 */
+  .rbar{display:flex;gap:10px;align-items:center;margin-bottom:14px;flex-wrap:wrap}
+  #screenwrap{background:#2b241c;border:1px solid var(--line);border-radius:14px;overflow:hidden;
+    height:calc(100vh - 210px);display:flex;align-items:center;justify-content:center;box-shadow:var(--shadow)}
+  #screen{max-width:100%;max-height:100%;display:block}
+  #rstatus{color:#b07b3f;font-size:13px}
+  /* 진단 */
+  #diagframe{width:100%;height:calc(100vh - 230px);border:1px solid var(--line);border-radius:14px;background:#fff;box-shadow:var(--shadow)}
+  #diagout{white-space:pre-wrap;font-family:Consolas,monospace;font-size:12.5px;color:var(--ink);
+    background:#fffdf8;border:1px solid var(--line);border-radius:12px;padding:14px;max-height:calc(100vh-230px);overflow:auto;display:none}
+  /* 대시보드 실시간 모니터 */
+  .mon{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin:18px 0 16px}
+  .gcard{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:20px 20px 18px;
+    display:flex;flex-direction:column;align-items:center;box-shadow:var(--shadow)}
+  .gwrap{position:relative;width:132px;height:132px}
+  .ring{width:132px;height:132px;transform:rotate(-90deg)}
+  .rbg{fill:none;stroke:#5a3c1e14;stroke-width:11}
+  .rfg{fill:none;stroke:var(--acc);stroke-width:11;stroke-linecap:round;
+    stroke-dasharray:326.7;stroke-dashoffset:326.7;transition:stroke-dashoffset .6s ease,stroke .6s}
+  .gcenter{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center}
+  .gcenter b{font-size:31px;font-weight:800;line-height:1}
+  .gcenter b i{font-size:15px;font-style:normal;color:var(--sub);font-weight:700}
+  .gcenter span{font-size:12px;color:var(--sub);margin-top:5px;letter-spacing:.5px}
+  .gname{margin-top:14px;font-weight:700;font-size:14px;text-align:center;max-width:100%;
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .gsub{margin-top:4px;color:var(--sub);font-size:12.5px;text-align:center;min-height:16px}
+  .mon2{display:grid;grid-template-columns:1.5fr 1fr 1fr;gap:16px;margin-bottom:8px}
+  .ct{font-size:13px;color:#8a7862;font-weight:600;margin:0 0 14px;display:flex;justify-content:space-between}
+  .cores{display:flex;align-items:flex-end;gap:3px;height:72px}
+  .cbar{flex:1;background:#5a3c1e12;border-radius:3px;position:relative;min-width:3px;height:100%}
+  .cbar i{position:absolute;left:0;right:0;bottom:0;height:0;display:block;border-radius:3px;
+    background:linear-gradient(180deg,var(--acc2),var(--acc));transition:height .5s ease,background .5s}
+  .tbars{display:flex;flex-direction:column;gap:13px}
+  .tb{display:grid;grid-template-columns:48px 1fr 46px;align-items:center;gap:10px;font-size:13px}
+  .tb .track{height:9px;background:#5a3c1e14;border-radius:6px;overflow:hidden}
+  .tb .fill{height:100%;width:0;border-radius:6px;transition:width .6s ease,background .6s}
+  .tb .tv{text-align:right;color:var(--sub);font-variant-numeric:tabular-nums}
+  .net{justify-content:center;gap:16px}
+  .net .nrow{display:flex;align-items:center;gap:12px;font-size:14px}
+  .net .nrow b{margin-left:auto;font-size:19px;font-weight:800;font-variant-numeric:tabular-nums}
+  .net .up{color:var(--amber)} .net .down{color:var(--ok)}
+  .specs{display:flex;flex-direction:column;gap:12px;max-width:860px}
+  .spec{display:flex;gap:14px;align-items:flex-start;padding:16px 18px}
+  .spec .si{font-size:20px;flex:0 0 auto;width:42px;height:42px;border-radius:12px;
+    background:#5a3c1e10;display:flex;align-items:center;justify-content:center}
+  .spec .sc{min-width:0}
+  .spec .sk{font-size:12px;color:var(--sub)}
+  .spec .sv{font-size:14.5px;font-weight:700;margin-top:2px;word-break:break-word}
+  .spec .sx{font-size:12px;color:var(--sub);margin-top:3px;word-break:break-word}
+  /* 진단 세부 탭 */
+  .subtabs{display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 16px}
+  .subtabs button{background:var(--card);border:1px solid var(--line);color:var(--sub);
+    padding:8px 15px;border-radius:20px;font:inherit;font-size:13.5px;cursor:pointer;transition:.15s}
+  .subtabs button:hover{color:var(--fg);border-color:var(--acc)}
+  .subtabs button.on{background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff8ee;border:0;font-weight:700}
+  .dgrid{display:flex;flex-direction:column;gap:13px;max-width:860px}
+  .dcard{background:var(--card);border:1px solid var(--line);border-radius:14px;overflow:hidden;box-shadow:var(--shadow)}
+  .dcard h3{margin:0;padding:11px 16px;font-size:12.5px;font-weight:800;color:#6f5c45;
+    background:linear-gradient(180deg,#5a3c1e0d,transparent);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:8px}
+  .dcard .dbody{padding:5px 16px 9px}
+  .dcard.notice{border-color:#bd8f5d66}
+  .dcard.notice h3{background:linear-gradient(180deg,#bd8f5d24,transparent);color:#7a5a30}
+  .ninfo{font-size:13px;color:var(--sub);line-height:1.55;padding-top:8px}
+  .drow{display:flex;justify-content:space-between;align-items:center;gap:14px;padding:9px 0;
+    border-bottom:1px solid var(--line);font-size:13.5px}
+  .drow:last-child{border-bottom:0}
+  .drow .dk{color:var(--sub);flex:0 0 auto}
+  .drow .dv{text-align:right;font-weight:700;word-break:break-word}
+  .rbwrap{display:flex;align-items:center;gap:10px;flex:1;justify-content:flex-end}
+  .rbtrack{flex:1;max-width:130px;height:8px;background:#5a3c1e14;border-radius:5px;overflow:hidden}
+  .rbtrack i{display:block;height:100%;border-radius:5px;transition:width .5s ease}
+  .rbwrap .dv{min-width:52px}
+  .badge{display:inline-block;padding:3px 11px;border-radius:20px;font-size:12px;font-weight:700}
+  .badge.bok{background:#8a9c6a2b;color:#5c6b38}
+  .badge.bbad{background:#c67c5f2b;color:#a3402a}
+  .badge.binfo{background:#d3a4572b;color:#8a6320}
+  .fitem{padding:9px 2px;border-bottom:1px solid var(--line);font-size:13px;line-height:1.5}
+  .fitem:last-child{border-bottom:0}
+  .fitem.warn{color:#a3402a;font-weight:600}
+  .fitem.info{color:#8a6320}
+  .fitem.ok{color:#5c6b38}
+  .corewrap{display:grid;grid-template-columns:repeat(2,1fr);gap:7px 18px;padding-top:8px}
+  .corecell{display:flex;align-items:center;gap:9px;font-size:12px}
+  .corecell .cl{width:34px;color:var(--sub);font-variant-numeric:tabular-nums}
+  .corecell .ct{flex:1;height:9px;background:#5a3c1e14;border-radius:5px;overflow:hidden}
+  .corecell .ct i{display:block;height:100%;border-radius:5px;transition:width .4s}
+  .corecell .cvv{width:40px;text-align:right;color:var(--sub);font-variant-numeric:tabular-nums}
+  @media(max-width:520px){.corewrap{grid-template-columns:1fr}}
+  /* 복구 메뉴 */
+  .fixgrid{display:flex;flex-direction:column;gap:12px;max-width:860px;margin-bottom:16px}
+  .fixcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px 18px;box-shadow:var(--shadow);
+    display:grid;grid-template-columns:34px 1fr auto;align-items:center;gap:4px 16px}
+  .fixcard .fi{font-size:22px;grid-row:1/3;align-self:center}
+  .fixcard h3{margin:0;font-size:15px;grid-column:2}
+  .fixcard p{margin:0;color:var(--sub);font-size:12.5px;line-height:1.5;grid-column:2}
+  .fixcard .btn{grid-column:3;grid-row:1/3;align-self:center;white-space:nowrap}
+  #fixout{white-space:pre-wrap;font-family:Consolas,monospace;font-size:12.5px;color:#dbe3cb;
+    background:#241f18;border:1px solid var(--line);border-radius:12px;padding:14px;line-height:1.55;
+    min-height:120px;max-height:min(58vh,460px);overflow:auto;display:none}
+  /* 원격 명령 콘솔 */
+  #cmdbar{margin-bottom:14px}
+  .cmdrow{display:flex;gap:8px;margin-bottom:8px;flex-wrap:wrap}
+  select.txt{padding:10px 12px;cursor:pointer}
+  .cmdout{white-space:pre-wrap;font-family:Consolas,monospace;font-size:12.5px;color:#dbe3cb;
+    background:#241f18;border:1px solid var(--line);border-radius:10px;padding:12px;max-height:210px;overflow:auto;margin:0}
+  /* 세션 기록 */
+  #logbox{white-space:pre-wrap;font-family:Consolas,monospace;font-size:13px;color:var(--ink);
+    max-height:calc(100vh - 230px);overflow:auto}
+  /* 모바일 지원 */
+  .mobwrap{display:grid;grid-template-columns:300px 1fr;gap:20px}
+  .qrbox{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px;box-shadow:var(--shadow);
+    display:flex;flex-direction:column;align-items:center;gap:12px;height:fit-content}
+  .qrbox img{width:240px;height:240px;border-radius:12px;background:#fff}
+  .qrbox .qurl{font-size:12px;color:var(--sub);word-break:break-all;text-align:center}
+  .qrbox .qhint{font-size:13px;font-weight:700}
+  .galgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+  .galgrid a{display:block;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:var(--card);box-shadow:var(--shadow)}
+  .galgrid img{width:100%;height:130px;object-fit:cover;display:block}
+  .galgrid .vid{height:130px;display:flex;align-items:center;justify-content:center;font-size:34px}
+  @media(max-width:820px){.mobwrap{grid-template-columns:1fr}}
+  /* 임시 상담 채팅 */
+  .chatpane{display:flex;flex-direction:column;background:var(--card);border:1px solid var(--line);
+    border-radius:16px;box-shadow:var(--shadow);overflow:hidden;height:420px}
+  .chatlog{flex:1 1 auto;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:9px}
+  .chatlog .m{max-width:78%;padding:9px 12px;border-radius:13px;font-size:14px;line-height:1.45;word-break:break-word;white-space:pre-wrap}
+  .chatlog .m.t{align-self:flex-end;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff8ee;border-bottom-right-radius:4px}
+  .chatlog .m.c{align-self:flex-start;background:var(--bg2);border:1px solid var(--line);border-bottom-left-radius:4px}
+  .chatbar{flex:0 0 auto;display:flex;gap:8px;padding:10px;border-top:1px solid var(--line);background:var(--panel)}
+  .chatbar input{flex:1;min-width:0;border:1px solid var(--line);border-radius:20px;padding:9px 14px;font-size:14px;background:#fffdf8;color:var(--fg)}
+</style>
+</head>
+<body>
+  <aside class="side">
+    <div class="brand"><span class="dot"><svg class="lu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10 2v2"/><path d="M14 2v2"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"/><path d="M6 2v2"/></svg></span> AS Studio</div>
+    <nav class="nav" id="nav">
+      <button class="navback" id="navback"><svg class="lu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg> 전체 메뉴</button>
+      <div class="grp">모니터링</div>
+      <button data-p="dash" class="on"><svg class="lu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></svg> 대시보드</button>
+      <div class="grp">고객 지원</div>
+      <button data-p="remote"><svg class="lu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg> 원격 지원</button>
+      <button data-p="mobile"><svg class="lu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg> 모바일·상담</button>
+      <div class="grp">점검 · 조치</div>
+      <button data-p="diag"><svg class="lu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg> PC 진단</button>
+      <button data-p="repair"><svg class="lu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg> 복구·수정</button>
+      <button data-p="tools"><svg class="lu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg> 도구</button>
+      <div class="grp">시스템</div>
+      <button data-p="log"><svg class="lu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l4 2"/></svg> 세션 기록</button>
+      <button data-p="settings"><svg class="lu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg> 설정</button>
+    </nav>
+    <div class="foot">원격 지원 · PC 진단</div>
+  </aside>
+
+  <div class="main">
+    <div class="top"><h1 id="ttl">대시보드</h1>
+      <input class="txt topsearch" id="gsearch" placeholder="🔍 구글 검색 (에러·증상) — Enter" onkeydown="if(event.key==='Enter')gSearch()">
+      <div class="pill" id="adminpill">권한 확인 중…</div></div>
+    <div class="body">
+
+      <!-- 대시보드 -->
+      <section class="panel on" id="p-dash">
+        <div class="subview on" data-sub="mon">
+        <p class="hello">안녕하세요 👋</p>
+        <p class="muted">이 PC의 실시간 상태입니다.</p>
+
+        <!-- 실시간 게이지 -->
+        <div class="mon">
+          <div class="gcard">
+            <div class="gwrap">
+              <svg class="ring" viewBox="0 0 120 120"><circle class="rbg" cx="60" cy="60" r="52"></circle><circle class="rfg" id="ring-cpu" cx="60" cy="60" r="52"></circle></svg>
+              <div class="gcenter"><b id="cpu-val">–<i>%</i></b><span>CPU</span></div>
+            </div>
+            <div class="gname" id="cpu-name">프로세서</div>
+            <div class="gsub" id="cpu-sub">온도 –</div>
+          </div>
+          <div class="gcard">
+            <div class="gwrap">
+              <svg class="ring" viewBox="0 0 120 120"><circle class="rbg" cx="60" cy="60" r="52"></circle><circle class="rfg" id="ring-mem" cx="60" cy="60" r="52"></circle></svg>
+              <div class="gcenter"><b id="mem-val">–<i>%</i></b><span>메모리</span></div>
+            </div>
+            <div class="gname">RAM</div>
+            <div class="gsub" id="mem-sub">– / – GB</div>
+          </div>
+          <div class="gcard">
+            <div class="gwrap">
+              <svg class="ring" viewBox="0 0 120 120"><circle class="rbg" cx="60" cy="60" r="52"></circle><circle class="rfg" id="ring-gpu" cx="60" cy="60" r="52"></circle></svg>
+              <div class="gcenter"><b id="gpu-val">–<i>%</i></b><span>GPU</span></div>
+            </div>
+            <div class="gname" id="gpu-name">그래픽</div>
+            <div class="gsub" id="gpu-sub">온도 – · VRAM –</div>
+          </div>
+        </div>
+
+        <!-- 코어 / 온도 / 네트워크 -->
+        <div class="mon2">
+          <div class="card">
+            <p class="ct"><span>CPU 코어별 사용률</span><span id="cores-avg"></span></p>
+            <div class="cores" id="cores"></div>
+          </div>
+          <div class="card">
+            <p class="ct"><span>온도</span></p>
+            <div class="tbars" id="tbars"><div class="muted" style="font-size:12.5px">측정 중…</div></div>
+          </div>
+          <div class="card net">
+            <p class="ct" style="margin-bottom:2px"><span>네트워크 · 전력</span></p>
+            <div class="nrow"><span class="down">▼ 다운</span><b id="net-down">–</b></div>
+            <div class="nrow"><span class="up">▲ 업로드</span><b id="net-up">–</b></div>
+            <div class="nrow"><span style="color:var(--acc)">⚡ 소비전력</span><b id="pow-est">–</b></div>
+          </div>
+        </div>
+
+        </div>
+        <!-- 사양 -->
+        <div class="subview" data-sub="spec">
+        <h2 class="sec" style="margin-top:0">시스템 사양</h2>
+        <div class="specs" id="specs"><div class="muted">불러오는 중…</div></div>
+
+        <!-- 빠른 작업 -->
+        <h2 class="sec">빠른 작업</h2>
+        <div class="quick">
+          <div class="qcard" onclick="go('remote')"><div class="qi">🖥️</div><h3>고객에게 원격 접속</h3><p>접속 코드로 바로 연결</p></div>
+          <div class="qcard" onclick="go('diag')"><div class="qi">🔍</div><h3>PC 진단</h3><p>사양·온도·상태 원클릭 분석</p></div>
+        </div>
+
+        </div>
+        <div class="subview" data-sub="hist">
+        <h2 class="sec" style="margin-top:0">최근 진단 이력</h2>
+        <div class="card"><div id="histbox">불러오는 중…</div></div>
+        </div>
+      </section>
+
+      <!-- 원격 -->
+      <section class="panel" id="p-remote">
+        <div class="rbar">
+          <input class="txt" id="code" placeholder="접속 코드 6자리" style="width:150px" maxlength="6">
+          <button class="btn pri" id="bconn" onclick="rConnect()">연결</button>
+          <button class="btn" id="bfile" onclick="api('remote_send_file')" disabled>📎 파일</button>
+          <button class="btn" id="bdiag" onclick="api('remote_request_diag')" disabled>🔍 원격 진단</button>
+          <button class="btn" id="bcmd" onclick="toggleCmd()" disabled>⌨️ 원격 명령</button>
+          <button class="btn" id="brec" onclick="toggleRec()" disabled>⏺ 녹화</button>
+          <button class="btn warn" id="bstop" onclick="rStop()" disabled>연결 끊기</button>
+          <span id="rstatus">대기</span>
+        </div>
+        <div id="cmdbar" style="display:none">
+          <div class="cmdrow">
+            <select id="cmdshell" class="txt"><option value="cmd">CMD</option><option value="powershell">PowerShell</option></select>
+            <input class="txt" id="cmdin" placeholder="명령 입력 후 Enter — 예: ipconfig /all · tasklist · reg query ... · sfc /scannow" style="flex:1;min-width:200px">
+            <button class="btn pri" onclick="rCmd()">실행</button>
+          </div>
+          <pre id="cmdout" class="cmdout">원격 명령 결과가 여기에 표시됩니다.
+CMD/PowerShell로 레지스트리(reg)·작업목록(tasklist/taskkill)·스크립트 등 대부분을 원격 실행할 수 있습니다.</pre>
+        </div>
+        <div id="screenwrap"><img id="screen" alt=""></div>
+      </section>
+
+      <!-- 모바일 지원 -->
+      <section class="panel" id="p-mobile">
+        <div class="subview on" data-sub="photo">
+        <div class="rbar">
+          <button class="btn pri" onclick="mobileNew()">📷 QR 생성</button>
+          <span class="muted">QR을 고객에게 보여주면 고객이 휴대폰으로 사진·화면을 찍어 보냅니다 (앱 설치 불필요).</span>
+        </div>
+        <div class="mobwrap">
+          <div class="qrbox" id="qrbox">
+            <div class="muted" style="text-align:center">"QR 생성"을 누르면<br>여기에 QR이 표시됩니다.</div>
+          </div>
+          <div>
+            <h2 class="sec" style="margin-top:0">받은 사진·영상</h2>
+            <div class="galgrid" id="galgrid"><div class="muted">아직 받은 사진이 없습니다.</div></div>
+          </div>
+        </div>
+        </div>
+        <div class="subview" data-sub="chat">
+        <div class="rbar">
+          <button class="btn pri" onclick="chatNew()">💬 채팅 QR 생성</button>
+          <button class="btn" id="chatcallbtn" onclick="chatCall()" disabled>📞 음성통화</button>
+          <button class="btn" id="chatlogbtn" onclick="api('chat_openlog',chatTok)" disabled>📁 기록 파일 열기</button>
+          <span class="muted">고객이 QR을 찍으면 휴대폰 웹에서 바로 대화(앱 불필요). <b>대화 내용은 이 PC에만 자동 저장</b>됩니다. 음성통화는 P2P로 연결됩니다.</span>
+        </div>
+        <div class="mobwrap">
+          <div class="qrbox" id="chatqr">
+            <div class="muted" style="text-align:center">"채팅 QR 생성"을 누르면<br>여기에 QR이 표시됩니다.</div>
+          </div>
+          <div class="chatpane">
+            <div class="chatlog" id="chatlog"><div class="muted">채팅 QR을 생성하고 고객이 접속하면 여기에 대화가 표시됩니다.</div></div>
+            <div class="chatbar">
+              <input id="chatin" placeholder="고객에게 보낼 메시지…" disabled
+                     onkeydown="if(event.key==='Enter')chatSend()">
+              <button class="btn pri" id="chatsend" onclick="chatSend()" disabled>전송</button>
+            </div>
+          </div>
+        </div>
+        </div>
+      </section>
+
+      <!-- 진단 -->
+      <section class="panel" id="p-diag">
+        <div class="subtabs" id="diagtabs" style="display:none">
+          <button data-s="full" class="on" onclick="dTab('full')">📋 종합 리포트</button>
+          <button data-s="cpu" onclick="dTab('cpu')">🧠 CPU</button>
+          <button data-s="gpu" onclick="dTab('gpu')">🎮 그래픽</button>
+          <button data-s="mem" onclick="dTab('mem')">🎛️ 메모리</button>
+          <button data-s="disk" onclick="dTab('disk')">💾 저장장치</button>
+          <button data-s="net" onclick="dTab('net')">🌐 네트워크</button>
+          <button data-s="power" onclick="dTab('power')">⚡ 전원(PSU)</button>
+          <button data-s="system" onclick="dTab('system')">🪟 시스템</button>
+        </div>
+        <!-- 종합 리포트 -->
+        <div id="dfull">
+          <div class="rbar">
+            <button class="btn pri" id="drun" onclick="dRun()">🔍 전체 진단 실행</button>
+            <button class="btn" id="dsave" onclick="api('save_report')" disabled>📄 리포트 저장</button>
+            <button class="btn" onclick="dHistory()">📋 이력</button>
+            <button class="btn" onclick="dInstalled()">📦 설치 목록</button>
+          </div>
+          <iframe id="diagframe"></iframe>
+          <div id="diagout"></div>
+        </div>
+        <!-- 세부 -->
+        <div id="ddetail" style="display:none">
+          <div class="rbar">
+            <button class="btn" onclick="dRefresh()">↻ 새로고침</button>
+            <span class="muted">마지막 진단 데이터 기준 · 필요 시 새로고침</span>
+          </div>
+          <div class="dgrid" id="dsecview"><div class="muted">불러오는 중…</div></div>
+        </div>
+      </section>
+
+      <!-- 복구·수정 -->
+      <section class="panel" id="p-repair">
+        <div id="repbody"><div class="muted">왼쪽에서 복구 분류를 선택하세요.</div></div>
+      </section>
+
+      <!-- 세션 기록 -->
+      <section class="panel" id="p-log">
+        <div class="rbar">
+          <button class="btn" onclick="loadTimeline()">↻ 새로고침</button>
+          <button class="btn warn" onclick="clearTimeline()">기록 지우기</button>
+          <span class="muted">이번 세션의 원격·진단·복구 작업이 시간순으로 기록됩니다.</span>
+        </div>
+        <div class="card"><div id="logbox">불러오는 중…</div></div>
+      </section>
+
+      <!-- 도구 -->
+      <section class="panel" id="p-tools">
+        <div class="subview on" data-sub="win">
+        <p class="muted" style="margin-top:0">Windows 기본 도구를 바로 엽니다. (상단 검색창으로 에러·증상을 구글에 바로 검색할 수 있습니다)</p>
+        <div class="toolgrid">
+          <button class="btn" onclick="openTool('control')">🎛️ 제어판</button>
+          <button class="btn" onclick="openTool('admintools')">🧰 Windows 도구</button>
+          <button class="btn" onclick="openTool('update')">🔄 Windows 업데이트</button>
+          <button class="btn" onclick="openTool('devmgmt')">🔌 장치 관리자</button>
+          <button class="btn" onclick="openTool('diskmgmt')">💽 디스크 관리</button>
+          <button class="btn" onclick="openTool('services')">⚙️ 서비스</button>
+          <button class="btn" onclick="openTool('taskmgr')">📊 작업 관리자</button>
+          <button class="btn" onclick="openTool('msinfo')">ℹ️ 시스템 정보</button>
+          <button class="btn" onclick="openTool('eventvwr')">📋 이벤트 뷰어</button>
+          <button class="btn" onclick="openTool('regedit')">🗄️ 레지스트리 편집기</button>
+          <button class="btn" onclick="openTool('cleanmgr')">🧹 디스크 정리</button>
+          <button class="btn" onclick="openTool('sysprop')">🖥️ 시스템 속성</button>
+        </div>
+        </div>
+        <div class="subview" data-sub="ext">
+        <p class="muted" style="margin-top:0">현장에서 자주 쓰는 외부 유틸 다운로드 페이지를 엽니다. (설치 파일은 각 공식 사이트에서 받으세요)</p>
+        <div class="toolgrid">
+          <button class="btn" onclick="openUrl('https://www.3dpchip.com/3dpchip/3dp/net_down_eng.php')">🌐 3DP Net (랜 드라이버)</button>
+          <button class="btn" onclick="openUrl('https://www.3dpchip.com/')">🧩 3DP Chip (드라이버 통합)</button>
+          <button class="btn" onclick="openUrl('https://fastcopy.jp/')">📁 FastCopy (빠른 복사)</button>
+          <button class="btn" onclick="openUrl('https://www.voidtools.com/')">🔎 Everything (파일 검색)</button>
+          <button class="btn" onclick="openUrl('https://www.nirsoft.net/utils/blue_screen_view.html')">💥 BlueScreenView</button>
+        </div>
+        </div>
+      </section>
+
+      <!-- 설정 -->
+      <section class="panel" id="p-settings">
+        <div class="subview on" data-sub="relay">
+        <h2 class="sec" style="margin-top:0">릴레이 서버</h2>
+        <div class="card">
+          <input class="txt" id="relay" style="width:min(420px,100%)" placeholder="wss://…/relay">
+          <button class="btn pri" onclick="setRelay()" style="margin-left:8px">적용</button>
+          <p class="muted" id="adminline" style="margin-top:14px"></p>
+        </div>
+        </div>
+        <div class="subview" data-sub="admin">
+        <h2 class="sec" style="margin-top:0">관리자 권한</h2>
+        <div class="card">
+          <p class="muted" id="adminline2" style="margin:0 0 12px">권한 확인 중…</p>
+          <button class="btn pri" id="btnadmin" onclick="restartAdmin()">🔺 관리자 권한으로 재시작</button>
+          <div id="adminout" style="margin-top:10px;white-space:pre-wrap;font-size:12.5px;color:var(--sub)"></div>
+        </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+
+<script>
+  const $=s=>document.querySelector(s);
+  function api(name,...args){
+    return fetch('/api/'+name,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(args)})
+      .then(r=>r.json()).then(j=>j.result).catch(()=>null);
+  }
+  setInterval(()=>api('ping'),2000);   // 창 생존 신호 (닫으면 서버 자동 종료)
+
+  // 네비게이션 (대메뉴 → 서브메뉴 → 실행 내용)
+  const titles={dash:"대시보드",remote:"원격 지원",mobile:"모바일·상담",diag:"PC 진단",repair:"복구·수정",log:"세션 기록",tools:"도구",settings:"설정"};
+  function gSearch(){ const q=$('#gsearch').value.trim(); if(q) api('web_search',q); }
+  function openTool(k){ api('open_tool',k); }
+  function openUrl(u){ api('open_url',u); }
+
+  const REPAIRS={
+    auto:{i:'⚡',t:'자동 복구',d:'진단 결과를 분석해 필요한 복구를 자동 실행합니다. (먼저 PC 진단을 실행하세요)',c:'분석 기반 자동 복구를 실행할까요?',b:'실행'},
+    net:{i:'🌐',t:'인터넷 복구',d:'DNS 비우기·IP 갱신, 관리자 권한이면 Winsock/TCPIP 초기화까지 수행합니다.',c:'인터넷 복구를 실행할까요? (원격 연결이 끊길 수 있습니다)',b:'실행'},
+    speedtest:{i:'🚀',t:'인터넷 속도 측정',d:'Cloudflare로 지연시간(핑)·다운로드·업로드 속도를 측정합니다.',c:'',b:'측정'},
+    win:{i:'🛠️',t:'Windows 복구 (SFC)',d:'SFC로 시스템 파일 손상을 검사·복구합니다. 수 분 소요됩니다.',c:'SFC 검사를 실행할까요? 수 분 걸립니다.',b:'실행',adm:1},
+    temp:{i:'🧹',t:'임시 파일 정리',d:'임시 폴더(TEMP)의 불필요한 파일을 정리해 저장 공간을 확보합니다.',c:'임시 파일을 정리할까요?',b:'실행'},
+    updatecache:{i:'🔄',t:'업데이트 캐시 정리',d:'Windows Update 오류의 흔한 원인인 다운로드 캐시를 비웁니다.',c:'업데이트 캐시를 정리할까요?',b:'실행',adm:1},
+    power:{i:'🔋',t:'최대 성능 모드',d:'전원 계획을 고성능으로 전환해 성능을 우선합니다.',c:'전원을 최대 성능 모드로 바꿀까요?',b:'실행'},
+    faststartup:{i:'⚡',t:'빠른 시작 끄기',d:'종료 문제·업데이트 오류의 흔한 원인인 빠른 시작을 끕니다.',c:'빠른 시작을 끌까요?',b:'실행',adm:1},
+    stress:{i:'🔥',t:'CPU 스트레스 테스트',d:'전체 코어에 30초간 부하를 주어 발열·불안정(멈춤/크래시)을 확인합니다. 온도 90°C 도달 시 자동 중단.',c:'CPU 스트레스 테스트(30초)를 시작할까요? 발열이 올라갑니다.',b:'시작'},
+    restore:{i:'💾',t:'시스템 복원 지점',d:'복구 작업 전에 현재 상태를 복원 지점으로 저장합니다.',c:'시스템 복원 지점을 만들까요?',b:'실행',adm:1},
+    wifi:{i:'📶',t:'Wi-Fi 백업',d:'저장된 Wi-Fi 프로파일(비밀번호 포함)을 바탕화면에 내보냅니다.',c:'Wi-Fi 프로파일을 백업할까요?',b:'실행'},
+    store:{i:'🧩',t:'Store 앱 재등록',d:'손상된 기본 앱(계산기·사진 등)을 재등록합니다. 수 분 소요됩니다.',c:'Store 앱을 재등록할까요? 수 분 걸립니다.',b:'실행',adm:1},
+    outlook:{i:'📧',t:'Outlook PST 복구',d:'손상된 Outlook 데이터파일(.pst/.ost)을 MS 복구 도구(scanpst)로 검사·복구합니다.',c:'Outlook 복구 도구(scanpst)를 열까요?',b:'실행'},
+  };
+  const REPAIR_CATS=[
+    {k:'auto',t:'자동',items:['auto']},
+    {k:'network',t:'네트워크',items:['net','speedtest']},
+    {k:'sysfile',t:'시스템 파일',items:['win']},
+    {k:'clean',t:'정리',items:['temp','updatecache']},
+    {k:'perf',t:'성능',items:['power','faststartup','stress']},
+    {k:'backup',t:'백업·복원',items:['restore','wifi']},
+    {k:'app',t:'앱',items:['store','outlook']},
+  ];
+  const SUBMENU={
+    dash:[{k:'mon',t:'실시간 현황'},{k:'spec',t:'시스템 사양'},{k:'hist',t:'진단 이력'}],
+    remote:[{k:'main',t:'원격 세션'}],
+    mobile:[{k:'photo',t:'사진 수신'},{k:'chat',t:'상담 채팅'}],
+    diag:[{k:'full',t:'종합 리포트'},{k:'cpu',t:'CPU'},{k:'gpu',t:'그래픽'},{k:'mem',t:'메모리'},{k:'disk',t:'저장장치'},{k:'net',t:'네트워크'},{k:'power',t:'전원(PSU)'},{k:'system',t:'시스템'}],
+    repair:REPAIR_CATS.map(c=>({k:c.k,t:c.t})),
+    tools:[{k:'win',t:'Windows 기본 도구'},{k:'ext',t:'외부 유틸'}],
+    log:[{k:'main',t:'세션 타임라인'}],
+    settings:[{k:'relay',t:'릴레이 서버'},{k:'admin',t:'관리자 권한'}],
+  };
+  const CHEV='<svg class="lu" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>';
+  let curPanel='dash'; const curSub={};
+  function hasSub(p){ return (SUBMENU[p]||[]).filter(x=>!x.grp).length>1; }
+
+  function buildNav(){
+    document.querySelectorAll('.nav > button[data-p]').forEach(btn=>{
+      const p=btn.dataset.p;
+      if(!hasSub(p)) return;
+      const chev=document.createElement('span'); chev.className='chev'; chev.innerHTML=CHEV; btn.appendChild(chev);
+      const sub=document.createElement('div'); sub.className='navsub'; sub.dataset.for=p;
+      (SUBMENU[p]||[]).filter(x=>!x.grp).forEach(it=>{
+        const b=document.createElement('button'); b.className='subitem'; b.dataset.k=it.k; b.textContent=it.t;
+        b.onclick=(e)=>{ e.stopPropagation(); if(curPanel!==p){ showPanel(p); focusPanel(p); } selectSub(p,it.k); };
+        sub.appendChild(b);
+      });
+      btn.after(sub);
+    });
+    document.querySelectorAll('.nav > button[data-p]').forEach(b=>b.onclick=()=>{
+      const p=b.dataset.p;
+      if(curPanel===p && hasSub(p) && $('#nav').classList.contains('focus')) showAll();  // 접기 → 전체 메뉴
+      else enter(p);
+    });
+    $('#navback').onclick=showAll;
+  }
+  function showAll(){   // 전체 메뉴 (포커스 해제)
+    $('#nav').classList.remove('focus');
+    document.querySelectorAll('.navsub').forEach(s=>s.classList.remove('open'));
+    document.querySelectorAll('.nav > button[data-p]').forEach(b=>b.classList.remove('exp'));
+  }
+  function focusPanel(p){   // 클릭한 대메뉴만 펼치고 나머지 대메뉴는 숨김(밀어냄)
+    $('#nav').classList.add('focus');
+    document.querySelectorAll('.navsub').forEach(s=>s.classList.toggle('open', s.dataset.for===p));
+    document.querySelectorAll('.nav > button[data-p]').forEach(b=>b.classList.toggle('exp', b.dataset.p===p && hasSub(p)));
+  }
+  function enter(p){   // 대메뉴 진입: 이동 + (소메뉴 있으면 포커스 / 없으면 전체 메뉴 유지)
+    if(curPanel!==p) showPanel(p);
+    if(hasSub(p)) focusPanel(p); else showAll();
+  }
+  function go(p){ enter(p); }   // 대시보드 빠른작업 카드 호환
+  function showPanel(p,forceK){
+    curPanel=p;
+    document.querySelectorAll('.nav > button[data-p]').forEach(b=>b.classList.toggle('on',b.dataset.p===p));
+    document.querySelectorAll('.panel').forEach(s=>s.classList.toggle('on',s.id==='p-'+p));
+    $('#ttl').textContent=titles[p];
+    const items=(SUBMENU[p]||[]).filter(x=>!x.grp);
+    if(items.length) selectSub(p, forceK||curSub[p]||items[0].k);
+    if(p==='dash') loadHistory();
+    if(p==='log') loadTimeline();
+    if(p==='remote') setTimeout(()=>$('#screen').focus&&$('#screen').focus(),50);
+  }
+  function selectSub(p,k){
+    if(!k) return;
+    curSub[p]=k;
+    document.querySelectorAll('.navsub[data-for="'+p+'"] .subitem').forEach(b=>b.classList.toggle('on',b.dataset.k===k));
+    const it=(SUBMENU[p]||[]).find(x=>x.k===k);
+    $('#ttl').innerHTML=titles[p]+(it&&hasSub(p)?' <span class="crumb">· '+it.t+'</span>':'');
+    if(p==='diag'){ dTab(k); return; }
+    if(p==='repair'){ repRender(k); return; }
+    const panel=$('#p-'+p);
+    panel.querySelectorAll('.subview').forEach(s=>s.classList.toggle('on', s.dataset.sub===k));
+  }
+  function repRender(catKey){
+    const cat=REPAIR_CATS.find(c=>c.k===catKey)||REPAIR_CATS[0];
+    let h='<div class="fixgrid">';
+    cat.items.forEach(kind=>{ const r=REPAIRS[kind]; if(!r) return;
+      h+='<div class="fixcard"><div class="fi">'+r.i+'</div><h3>'+r.t+(r.adm?'<span class="adm">관리자</span>':'')+'</h3>'
+        +'<p>'+r.d+'</p><button class="btn'+(kind==='auto'?' pri':'')+'" data-kind="'+kind+'">'+(r.b||'실행')+'</button></div>';
+    });
+    h+='</div><div id="fixout"></div>';
+    $('#repbody').innerHTML=h;
+    $('#repbody').querySelectorAll('[data-kind]').forEach(b=>b.onclick=()=>fx(b.dataset.kind, REPAIRS[b.dataset.kind].c||''));
+  }
+  buildNav(); showPanel('dash'); showAll();
+
+  async function init(){
+    const s=await api('get_settings');
+    if(s){ $('#relay').value=s.relay||'';
+      const a=s.admin?'관리자 ✓':'일반 권한';
+      $('#adminpill').textContent=a;
+      $('#adminline').textContent='관리자 권한: '+(s.admin?'예 (CPU온도·시스템 복구 가능)':'아니오 (일부 기능 제한)');
+      $('#adminline2').textContent = s.admin ? '현재 관리자 권한으로 실행 중입니다 ✓' : '일반 권한으로 실행 중 — 재시작하면 CPU 온도·전압·PSU 레일 측정이 가능해집니다.';
+      $('#btnadmin').style.display = s.admin ? 'none' : 'inline-flex';
+    }
+    loadHistory();
+    renderSpecs();
+    startLive();
+  }
+
+  async function loadHistory(){ const t=await api('history_text'); if(t!=null)$('#histbox').textContent=t; }
+
+  // ---- 실시간 모니터 ----
+  const RC=326.7;
+  function esc(s){ return (''+(s==null?'':s)).replace(/[&<>]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[m])); }
+  function tcol(t){ return t>=80?'var(--warn)':t>=65?'var(--amber)':'var(--ok)'; }
+  function lcol(p){ return p>=90?'var(--warn)':p>=70?'var(--amber)':'var(--acc)'; }
+  function setRing(id,pct,color){ const el=$('#'+id); if(!el)return;
+    pct=Math.max(0,Math.min(100,pct||0));
+    el.style.strokeDashoffset=RC*(1-pct/100); el.style.stroke=color; }
+  function fmtRate(k){ if(k==null)return '–'; return k>=1024?(k/1024).toFixed(1)+' MB/s':Math.round(k)+' KB/s'; }
+
+  async function renderSpecs(){
+    const s=await api('get_specs');
+    if(!s){ setTimeout(renderSpecs,700); return; }   // 아직 준비 전 → 잠시 후 재시도
+    if(s.cpu&&s.cpu.name)$('#cpu-name').textContent=s.cpu.name;
+    const g=(s.gpu&&s.gpu[0])?s.gpu[0].name:null; if(g)$('#gpu-name').textContent=g;
+    const vols=(s.disks&&s.disks.volumes)||[];
+    const phys=(s.disks&&s.disks.physical)||[];
+    const diskMain=vols.map(v=>v.device+' '+v.percent+'%').join(' · ');
+    const diskSub=phys.map(p=>p.model+' ('+p.type+'·'+p.health+')').join(', ')
+      || vols.map(v=>v.device+' '+v.used_gb+'/'+v.total_gb+'GB').join(' · ');
+    const freq=(s.cpu&&s.cpu.freq_mhz)?' · '+(s.cpu.freq_mhz/1000).toFixed(1)+'GHz':'';
+    const cards=[
+      ['🧠','프로세서', (s.cpu&&s.cpu.name)||'–',
+        ((s.cpu&&s.cpu.cores_physical)||'?')+'코어 '+((s.cpu&&s.cpu.cores_logical)||'?')+'스레드'+freq],
+      ['🎛️','메모리', ((s.mem&&s.mem.total_gb)||'–')+' GB', '사용 '+((s.mem&&s.mem.used_gb)||'–')+' GB'],
+      ['🎮','그래픽', g||'–', (s.gpu&&s.gpu[0]&&s.gpu[0].driver)?'드라이버 '+s.gpu[0].driver:''],
+      ['💾','저장장치', diskMain||'–', diskSub||''],
+      ['🪟','시스템', (s.system&&s.system.edition)||'Windows',
+        'Build '+((s.system&&s.system.build)||'–')+((s.system&&s.system.uptime_hours)?' · 가동 '+s.system.uptime_hours+'h':'')],
+    ];
+    $('#specs').innerHTML=cards.map(c=>
+      '<div class="card spec"><div class="si">'+c[0]+'</div><div class="sc"><div class="sk">'
+      +esc(c[1])+'</div><div class="sv">'+esc(c[2])+'</div><div class="sx">'+esc(c[3])+'</div></div></div>').join('');
+  }
+
+  function buildCores(n){
+    const box=$('#cores'); if(box.childElementCount===n)return;
+    box.innerHTML='';
+    for(let i=0;i<n;i++){ const d=document.createElement('div'); d.className='cbar';
+      const b=document.createElement('i'); d.appendChild(b); box.appendChild(d); }
+  }
+  function renderTemps(t,gp){
+    const rows=[];
+    if(t.CPU!=null)rows.push(['CPU',t.CPU]);
+    if(gp&&gp.temp!=null)rows.push(['GPU',gp.temp]); else if(t.GPU!=null)rows.push(['GPU',t.GPU]);
+    if(t['디스크']!=null)rows.push(['디스크',t['디스크']]);
+    if(!rows.length){ $('#tbars').innerHTML='<div class="muted" style="font-size:12.5px">CPU 온도는 관리자 권한에서 표시됩니다.</div>'; return; }
+    $('#tbars').innerHTML=rows.map(r=>{
+      const tv=Math.round(r[1]); const w=Math.max(4,Math.min(100,tv));
+      return '<div class="tb"><span>'+r[0]+'</span><div class="track"><div class="fill" style="width:'
+        +w+'%;background:'+tcol(tv)+'"></div></div><span class="tv">'+tv+'°C</span></div>';
+    }).join('');
+  }
+  function updateLive(l){
+    if(!l)return;
+    if(l.cpu!=null){ $('#cpu-val').innerHTML=l.cpu+'<i>%</i>'; setRing('ring-cpu',l.cpu,lcol(l.cpu)); }
+    if(Array.isArray(l.cores)){
+      buildCores(l.cores.length); const bars=$('#cores').children;
+      for(let i=0;i<l.cores.length;i++){ const b=bars[i]&&bars[i].firstChild; if(b){
+        b.style.height=Math.max(3,l.cores[i])+'%';
+        b.style.background=l.cores[i]>=85?'linear-gradient(180deg,#c67c5f,#d19a63)':'linear-gradient(180deg,var(--acc2),var(--acc))'; } }
+      $('#cores-avg').textContent=(l.cpu!=null?'평균 '+l.cpu+'%':'');
+    }
+    if(l.mem){ $('#mem-val').innerHTML=l.mem.percent+'<i>%</i>'; setRing('ring-mem',l.mem.percent,lcol(l.mem.percent));
+      $('#mem-sub').textContent=l.mem.used_gb+' / '+l.mem.total_gb+' GB'; }
+    const gp=l.gpu||{};
+    if(gp.load!=null){ $('#gpu-val').innerHTML=Math.round(gp.load)+'<i>%</i>'; setRing('ring-gpu',gp.load,lcol(gp.load)); }
+    let gsub=[];
+    if(gp.temp!=null)gsub.push('온도 '+Math.round(gp.temp)+'°');
+    if(gp.power_w!=null)gsub.push(Math.round(gp.power_w)+'W');
+    if(gp.voltage_v!=null)gsub.push(gp.voltage_v+'V');
+    if(gp.vram_used_mb!=null&&gp.vram_total_mb!=null)gsub.push('VRAM '+(gp.vram_used_mb/1024).toFixed(1)+'/'+(gp.vram_total_mb/1024).toFixed(1)+'GB');
+    $('#gpu-sub').textContent=gsub.join(' · ')||'–';
+    const t=l.temps||{};
+    $('#cpu-sub').textContent=t.CPU!=null?('온도 '+Math.round(t.CPU)+'°C'):'온도 – (관리자 필요)';
+    renderTemps(t,gp);
+    if(l.net){ $('#net-down').textContent=fmtRate(l.net.down_kbs); $('#net-up').textContent=fmtRate(l.net.up_kbs); }
+    if(l.power_est!=null)$('#pow-est').textContent='~'+l.power_est+' W';
+  }
+  let liveTimer=null, liveBusy=false;
+  function startLive(){
+    if(liveTimer)return;
+    const tick=async()=>{
+      if(liveBusy)return;
+      if(!$('#p-dash').classList.contains('on'))return;   // 대시보드 볼 때만 폴링
+      liveBusy=true;
+      try{ const l=await api('get_live'); updateLive(l); }finally{ liveBusy=false; }
+    };
+    tick(); liveTimer=setInterval(tick,1500);
+  }
+
+  // ---- 원격 (폴링은 접속 중에만) ----
+  let seenVer=0, remoteTimer=null, statusTick=0, remoteBusy=false, cmdSeen=0;
+  function rConnect(){
+    const code=$('#code').value.trim();
+    if(!code){ $('#rstatus').textContent='접속 코드를 입력하세요'; return; }
+    api('remote_connect',code);
+    $('#bconn').disabled=true;
+    ['bfile','bdiag','bcmd','brec','bstop'].forEach(id=>$('#'+id).disabled=false);
+    $('#screen').focus();
+    startRemoteLoop();
+  }
+  function rStop(){
+    if(recOn){ api('rec_stop'); recOn=false; $('#brec').textContent='⏺ 녹화'; $('#brec').classList.remove('warn'); }
+    api('remote_disconnect');
+    stopRemoteLoop();
+    $('#bconn').disabled=false;
+    ['bfile','bdiag','bcmd','brec','bstop'].forEach(id=>$('#'+id).disabled=true);
+    $('#cmdbar').style.display='none';
+    $('#rstatus').textContent='연결 종료';
+  }
+  let recOn=false;
+  async function toggleRec(){
+    if(!recOn){
+      const r=await api('rec_start');
+      if(r&&r.ok){ recOn=true; $('#brec').textContent='⏹ 녹화 중지'; $('#brec').classList.add('warn'); $('#rstatus').textContent='● 녹화 중…'; }
+      else if(r&&r.error){ alert(r.error); }
+    } else {
+      const r=await api('rec_stop'); recOn=false;
+      $('#brec').textContent='⏺ 녹화'; $('#brec').classList.remove('warn');
+      if(r&&r.path){ $('#rstatus').textContent='녹화 저장됨: '+r.path+' ('+r.frames+'프레임)'; }
+      else if(r&&r.error){ $('#rstatus').textContent=r.error; }
+    }
+  }
+  // 원격 명령 콘솔
+  function toggleCmd(){ const b=$('#cmdbar'); const show=b.style.display==='none'; b.style.display=show?'block':'none'; if(show)$('#cmdin').focus(); }
+  function rCmd(){
+    const cmd=$('#cmdin').value.trim(); if(!cmd)return;
+    const shell=$('#cmdshell').value;
+    $('#cmdout').textContent='실행 중… ('+shell+')';
+    api('remote_cmd',shell,cmd);
+    $('#cmdin').value='';
+  }
+  function startRemoteLoop(){
+    if(remoteTimer)return;
+    remoteTimer=setInterval(async()=>{
+      if(remoteBusy)return;              // 이전 호출 안 끝났으면 건너뜀 (밀림 방지)
+      remoteBusy=true;
+      try{
+        const r=await api('remote_get_frame',seenVer);
+        if(r){ seenVer=r[0]; $('#screen').src='data:image/jpeg;base64,'+r[1]; }
+        if((statusTick%8)===0){ const st=await api('remote_status'); if(st!=null)$('#rstatus').textContent=st; }
+        if((statusTick%8)===3){ const c=await api('remote_cmd_result',cmdSeen); if(c){ cmdSeen=c[0]; $('#cmdout').textContent=c[1]||'(출력 없음)'; } }
+        statusTick++;
+      }finally{ remoteBusy=false; }
+    },60);
+  }
+  function stopRemoteLoop(){ if(remoteTimer){ clearInterval(remoteTimer); remoteTimer=null; } }
+  // 입력
+  const scr=$('#screen');
+  function norm(e){ const r=scr.getBoundingClientRect();
+    return {x:Math.min(1,Math.max(0,(e.clientX-r.left)/r.width)),
+            y:Math.min(1,Math.max(0,(e.clientY-r.top)/r.height))}; }
+  scr.addEventListener('mousemove',e=>{const n=norm(e);api('remote_input',{t:'move',x:n.x,y:n.y});});
+  scr.addEventListener('mousedown',e=>{const n=norm(e);const b=['left','middle','right'][e.button]||'left';
+    api('remote_input',{t:'button',x:n.x,y:n.y,button:b,pressed:true});e.preventDefault();});
+  scr.addEventListener('mouseup',e=>{const n=norm(e);const b=['left','middle','right'][e.button]||'left';
+    api('remote_input',{t:'button',x:n.x,y:n.y,button:b,pressed:false});});
+  scr.addEventListener('wheel',e=>{api('remote_input',{t:'scroll',dy:e.deltaY<0?1:-1});e.preventDefault();});
+  scr.setAttribute('tabindex','0');
+  const SPECIAL={Enter:'enter',Backspace:'backspace',Tab:'tab',Escape:'esc',' ':'space',
+    Shift:'shift',Control:'ctrl',Alt:'alt',Meta:'cmd',ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',
+    ArrowRight:'right',Delete:'delete',Home:'home',End:'end',PageUp:'page_up',PageDown:'page_down'};
+  scr.addEventListener('keydown',e=>{
+    const k=SPECIAL[e.key]||(e.key.length===1?null:null);
+    if(k){api('remote_input',{t:'key',action:'down',key:k});}
+    else if(e.key.length===1 && !e.ctrlKey && !e.altKey){api('remote_input',{t:'type',text:e.key});}
+    e.preventDefault();
+  });
+  scr.addEventListener('keyup',e=>{const k=SPECIAL[e.key];if(k)api('remote_input',{t:'key',action:'up',key:k});});
+
+  // ---- 진단 ----
+  function showFrame(html){ $('#diagframe').style.display='block';$('#diagout').style.display='none';
+    $('#diagframe').srcdoc=html; }
+  function showText(t){ $('#diagout').style.display='block';$('#diagframe').style.display='none';
+    $('#diagout').textContent=t; }
+  async function dRun(){
+    dTab('full');
+    $('#drun').disabled=true;$('#drun').textContent='분석 중…';
+    showText('PC를 분석 중입니다… 처음 진단은 10초 정도 걸릴 수 있습니다.');
+    const ok=h=>h&&typeof h==='string'&&h.length>20;
+    let html=await api('run_diagnostic');
+    if(!ok(html)){ showText('분석 중입니다… (재시도)'); await new Promise(r=>setTimeout(r,1500)); html=await api('run_diagnostic'); }
+    if(ok(html)){ showFrame(html); }
+    else { showText('진단 결과를 불러오지 못했습니다. [다시 진단]을 한 번 더 눌러주세요.'); }
+    $('#drun').disabled=false;$('#drun').textContent='🔍 다시 진단';
+    $('#dsave').disabled=false;
+    loadHistory();
+  }
+  async function dHistory(){ showText(await api('history_text')); }
+  async function dInstalled(){ showText('불러오는 중…'); showText(await api('installed_text')); }
+
+  // 진단 세부 탭
+  let curSec=null;
+  function dTab(s){
+    document.querySelectorAll('#diagtabs button').forEach(b=>b.classList.toggle('on',b.dataset.s===s));
+    const full=(s==='full');
+    $('#dfull').style.display=full?'block':'none';
+    $('#ddetail').style.display=full?'none':'block';
+    if(!full) loadSection(s);
+  }
+  async function loadSection(s){
+    curSec=s;
+    $('#dsecview').innerHTML='<div class="muted">불러오는 중…</div>';
+    const h=await api('diag_section',s);
+    if(curSec===s) $('#dsecview').innerHTML=h||'<div class="muted">정보 없음</div>';
+  }
+  async function dRefresh(){ await api('diag_refresh'); if(curSec) loadSection(curSec); }
+
+  // CPU 코어별 실시간 로드 (CPU 탭)
+  function renderCpuCores(cores){
+    const box=document.getElementById('cpucores'); if(!box||!Array.isArray(cores))return;
+    box.innerHTML=cores.map(function(v,i){
+      const c=v>=85?'#c67c5f':(v>=60?'#d3a457':'var(--acc)');
+      return '<div class="corecell"><span class="cl">C'+(i+1)+'</span><div class="ct"><i style="width:'
+        +Math.max(3,v)+'%;background:'+c+'"></i></div><span class="cvv">'+v+'%</span></div>';
+    }).join('');
+  }
+  setInterval(async()=>{
+    if($('#p-diag').classList.contains('on') && document.getElementById('cpucores')){
+      const l=await api('get_live'); if(l&&l.cores) renderCpuCores(l.cores);
+    }
+  },1200);
+  // CPU 온도·전압 활성화 (PawnIO)
+  async function enableSensors(){
+    const o=document.getElementById('sensout');
+    if(o)o.textContent='PawnIO 설치 창을 띄웁니다… UAC 창에서 "예", winget(검정 창)에서 설치 완료까지 기다리세요.';
+    const t=await api('enable_advanced_sensors'); if(o)o.textContent=t||'완료';
+  }
+  async function restartAdmin(){
+    const o=document.getElementById('sensout')||document.getElementById('adminout');
+    if(o)o.textContent='관리자 권한으로 재시작 중… UAC 창에서 "예"를 누르면 관리자 새 창이 열립니다.';
+    const t=await api('restart_as_admin'); if(o)o.textContent=t||'';
+  }
+
+  // 복구·수정
+  let repairSeen=0, repairPoll=null, repairLog='';
+  async function fx(kind,confirmMsg){
+    if(confirmMsg && !confirm(confirmMsg)) return;
+    $('#fixout').style.display='block'; $('#fixout').textContent='실행 준비 중…';
+    const started=await api('run_repair',kind);
+    if(started===false){ $('#fixout').textContent='다른 복구가 진행 중입니다. 끝난 뒤 다시 시도하세요.'; return; }
+    repairSeen=0; repairLog=''; const t0=Date.now();
+    if(repairPoll) clearInterval(repairPoll);
+    repairPoll=setInterval(async()=>{
+      const p=await api('repair_progress',repairSeen);
+      if(!p) return;   // 서버 응답 없음(일시적) → 다음 틱
+      repairSeen=p.ver;
+      if(p.text!=null) repairLog=p.text;
+      const secs=Math.round((Date.now()-t0)/1000);
+      if(p.busy){
+        $('#fixout').textContent = repairLog + '\n\n⏳ 실행 중… (' + secs + '초 경과 · 창을 닫지 마세요)';
+      } else {
+        $('#fixout').textContent = repairLog;
+        clearInterval(repairPoll); repairPoll=null;
+      }
+      $('#fixout').scrollTop=$('#fixout').scrollHeight;
+    },500);
+  }
+
+  async function setRelay(){ await api('set_relay',$('#relay').value.trim()); }
+
+  // 세션 기록(타임라인)
+  async function loadTimeline(){ const t=await api('timeline_text'); if(t!=null)$('#logbox').textContent=t; }
+  async function clearTimeline(){ if(!confirm('세션 기록을 지울까요?'))return; await api('timeline_clear'); loadTimeline(); }
+  setInterval(()=>{ if($('#p-log').classList.contains('on')) loadTimeline(); },2500);
+
+  // 모바일 지원 (QR → 고객 폰 사진)
+  let mobTok=null;
+  async function mobileNew(){
+    $('#qrbox').innerHTML='<div class="muted">발급 중…</div>';
+    const r=await api('mobile_new');
+    if(!r||r.error){ $('#qrbox').innerHTML='<div class="muted">'+((r&&r.error)||'실패')+'</div>'; return; }
+    mobTok=r.token;
+    $('#qrbox').innerHTML='<img src="data:image/png;base64,'+r.qr+'" alt="QR">'
+      +'<div class="qhint">고객이 휴대폰 카메라로 스캔</div>'
+      +'<div class="qurl">'+r.url+'</div>';
+    loadGallery();
+  }
+  async function loadGallery(){
+    if(!mobTok)return;
+    const r=await api('mobile_list',mobTok);
+    const items=(r&&r.items)||[];
+    if(!items.length){ $('#galgrid').innerHTML='<div class="muted">고객이 사진을 보내면 여기에 표시됩니다.</div>'; return; }
+    $('#galgrid').innerHTML=items.map(function(it){
+      const isVid=/\.(mp4|webm)$/i.test(it.key||'');
+      return '<a href="'+it.full+'" target="_blank">'+(isVid?'<div class="vid">🎥</div>':'<img src="'+it.full+'" loading="lazy">')+'</a>';
+    }).join('');
+  }
+  setInterval(()=>{ if(mobTok && $('#p-mobile').classList.contains('on')) loadGallery(); },3000);
+
+  // QR 임시 상담 채팅 (기록은 이 PC 에만 자동저장)
+  let chatTok=null, chatSince=0, chatSeen={};
+  function chatEsc(s){ return (s||'').replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+  function chatAdd(m){
+    if(!m||!m.t||chatSeen[m.t])return; chatSeen[m.t]=1;
+    const first=$('#chatlog').querySelector('.muted'); if(first)first.remove();
+    const d=document.createElement('div'); d.className='m '+(m.f==='c'?'c':'t'); d.innerHTML=chatEsc(m.x);
+    $('#chatlog').appendChild(d); $('#chatlog').scrollTop=$('#chatlog').scrollHeight;
+  }
+  async function chatNew(){
+    $('#chatqr').innerHTML='<div class="muted">발급 중…</div>';
+    const r=await api('chat_new');
+    if(!r||r.error){ $('#chatqr').innerHTML='<div class="muted">'+((r&&r.error)||'실패')+'</div>'; return; }
+    chatTok=r.token; chatSince=0; chatSeen={}; chatCallUrl=r.callurl||'';
+    $('#chatlog').innerHTML='<div class="muted">고객 접속을 기다리는 중… 메시지를 먼저 보낼 수도 있습니다.</div>';
+    $('#chatqr').innerHTML='<img src="data:image/png;base64,'+r.qr+'" alt="QR">'
+      +'<div class="qhint">고객이 휴대폰 카메라로 스캔</div>'
+      +'<div class="qurl">'+r.url+'</div>';
+    $('#chatin').disabled=false; $('#chatsend').disabled=false;
+    $('#chatlogbtn').disabled=false; $('#chatcallbtn').disabled=false;
+  }
+  let chatCallUrl='';
+  function chatCall(){
+    if(!chatCallUrl)return;
+    api('open_url',chatCallUrl);
+    chatAdd({f:'t',x:'📞 음성통화 창을 열었습니다. 고객에게 채팅창의 "📞 통화" 버튼을 누르라고 안내하세요.',t:Date.now()});
+  }
+  async function chatSend(){
+    if(!chatTok)return;
+    const v=$('#chatin').value.trim(); if(!v)return; $('#chatin').value='';
+    const r=await api('chat_send',chatTok,v);
+    if(r&&r.t){ chatAdd({f:'t',x:v,t:r.t}); if(r.t>chatSince)chatSince=r.t; }
+    else if(r&&r.error){ chatAdd({f:'t',x:'⚠ '+r.error,t:Date.now()}); }
+  }
+  async function chatPoll(){
+    if(!chatTok)return;
+    const r=await api('chat_poll',chatTok,chatSince);
+    ((r&&r.msgs)||[]).forEach(m=>{ chatAdd(m); if(m.t>chatSince)chatSince=m.t; });
+  }
+  setInterval(()=>{ if(chatTok && $('#p-mobile').classList.contains('on')) chatPoll(); },2000);
+
+  // 명령창 Enter 로 실행
+  (function(){ const c=$('#cmdin'); if(c) c.addEventListener('keydown',e=>{ if(e.key==='Enter'){ e.preventDefault(); rCmd(); } }); })();
+
+  // 모든 함수/변수 정의 후 초기화
+  if(document.readyState==='loading') window.addEventListener('DOMContentLoaded',init);
+  else init();
+</script>
+</body>
+</html>

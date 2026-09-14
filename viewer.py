@@ -29,6 +29,7 @@ from PIL import Image, ImageTk
 from common import (
     MSG_AUTH, MSG_AUTH_OK, MSG_FRAME, MSG_INPUT, MSG_BYE, MSG_TILES,
     MSG_CLIPBOARD, MSG_FILE_START, MSG_FILE_CHUNK, MSG_FILE_END,
+    MSG_DIAG_REQUEST,
     TCPChannel, WSChannel,
 )
 
@@ -115,7 +116,8 @@ class ViewerApp:
         self.webrtc = webrtc           # 인터넷(P2P) 모드 여부
         self.relay_url = relay_url
         self.code = code
-        self.input_q = queue.Queue() if webrtc else None
+        self.out_q = queue.Queue() if webrtc else None   # (msg_type, payload) 송신 큐
+        self.bridge = {}               # webrtc_app 이 send_file 함수를 넣어줌
         self.running = True
         self._closing = False          # 사용자가 직접 종료한 경우
         self.frame_w = 0
@@ -144,6 +146,13 @@ class ViewerApp:
             bg="#89b4fa", fg="#11111b", relief="flat", padx=10, pady=2
         )
         self.btn_send_file.pack(side="left", padx=10, pady=5)
+
+        # PC 진단 버튼 (원격 진단 요청)
+        self.btn_diag = tk.Button(
+            toolbar, text="PC 진단", command=self.request_diagnostic,
+            bg="#cba6f7", fg="#11111b", relief="flat", padx=10, pady=2
+        )
+        self.btn_diag.pack(side="left", padx=(0, 6), pady=5)
         
         # 전송 진행률 레이블
         self.lbl_file_status = tk.Label(
@@ -175,10 +184,9 @@ class ViewerApp:
 
     def start(self):
         if self.webrtc:
-            # 인터넷(P2P) 모드: 동기 채널/클립보드/파일 경로를 쓰지 않음 (클립보드·파일은 추후 데이터채널로)
+            # 인터넷(P2P): 화면·입력·클립보드·파일 모두 데이터채널로 (webrtc_app 이 처리)
             try:
-                self.btn_send_file.config(state="disabled")
-                self.lbl_file_status.config(text="상태: 인터넷(P2P) 모드")
+                self.lbl_file_status.config(text="상태: 인터넷(P2P)")
             except Exception:
                 pass
             threading.Thread(target=self._webrtc_viewer_loop, daemon=True).start()
@@ -203,7 +211,8 @@ class ViewerApp:
                 try:
                     await webrtc_app.viewer_run(
                         self.relay_url, self.code, self._on_webrtc_frame,
-                        self.input_q, self._set_status, lambda: self.running)
+                        self.out_q, self._set_status, lambda: self.running,
+                        bridge=self.bridge)
                 except Exception:
                     pass
                 if self.running and not self._closing:
@@ -251,12 +260,28 @@ class ViewerApp:
                 break
         self.running = False
 
+    # ---------------- 원격 PC 진단 요청 ----------------
+    def request_diagnostic(self):
+        if self.webrtc and self.out_q is not None:
+            self.out_q.put((MSG_DIAG_REQUEST, b""))
+            self.lbl_file_status.config(text="상태: 진단 요청함 — 리포트가 곧 열립니다")
+        else:
+            self.lbl_file_status.config(text="상태: 인터넷(P2P) 모드에서만 가능")
+
     # ---------------- 파일 전송 ----------------
     def send_file_action(self):
-        if self.sending_file:
-            return
         path = filedialog.askopenfilename(title="전송할 파일 선택")
         if not path:
+            return
+        if self.webrtc:          # 인터넷(P2P): 데이터채널로 전송 (webrtc_app bridge)
+            fn = self.bridge.get("send_file")
+            if fn:
+                fn(path)
+                self.lbl_file_status.config(text="상태: 파일 전송 중...")
+            else:
+                self.lbl_file_status.config(text="상태: 아직 연결 안 됨")
+            return
+        if self.sending_file:
             return
         threading.Thread(target=self._send_file, args=(path,), daemon=True).start()
 
@@ -393,10 +418,10 @@ class ViewerApp:
 
     # ---------------- 전송 도우미 ----------------
     def _send_input(self, obj):
-        # 인터넷(P2P) 모드는 데이터채널/릴레이로 보내도록 큐에 적재
+        # 인터넷(P2P) 모드는 (타입, 페이로드) 로 송신 큐에 적재
         if self.webrtc:
-            if self.input_q is not None:
-                self.input_q.put(obj)
+            if self.out_q is not None:
+                self.out_q.put((MSG_INPUT, json.dumps(obj).encode("utf-8")))
             return
         # 전송 실패는 무시 — 끊김은 수신 루프가 감지해 자동 재연결한다.
         try:

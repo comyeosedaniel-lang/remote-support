@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>원격 지원 · PC 진단</title>
+<style>
+  :root{--bg:#efe6d6;--card:#fcf8f0;--panel:#f7f1e6;--fg:#453a2c;--sub:#9c8b74;
+        --line:#e6dbc6;--acc:#bd8f5d;--acc2:#a4703f;--ok:#8c9c68;--warn:#c67c5f;--ink:#5f5140;}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:'Malgun Gothic',system-ui,sans-serif;color:var(--fg);line-height:1.6;
+       background:radial-gradient(1300px 900px at 18% -12%,#f6efe0,var(--bg));min-height:100vh}
+  .wrap{max-width:680px;margin:0 auto;padding:0 20px}
+  header{padding:44px 0 4px;text-align:center}
+  header .logo{font-size:26px;font-weight:800;color:var(--acc2)}
+  header p{color:var(--sub);margin:8px 0 0}
+  .hero{text-align:center;padding:22px 0 6px}
+  .hero h1{font-size:28px;margin:0 0 10px}
+  .hero .lead{color:var(--ink);font-size:16px;margin:0 auto;max-width:520px}
+  h2{font-size:16px;border-bottom:1px solid var(--line);padding-bottom:8px;margin:30px 0 12px;color:var(--acc2)}
+  .terms{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:6px 20px;
+         box-shadow:0 6px 20px #5a3c1e12}
+  .terms li{color:var(--ink);font-size:14px;margin:12px 0}
+  .terms b{color:var(--fg)}
+  .dlwrap{text-align:center;padding:10px 0 6px}
+  .dl{display:inline-block;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff8ee;
+      font-size:19px;font-weight:800;text-decoration:none;padding:16px 34px;border-radius:12px;
+      box-shadow:0 8px 22px #a4703f44;transition:.15s}
+  .dl:hover{transform:translateY(-1px)}
+  .dl small{display:block;font-weight:600;font-size:12px;opacity:.85;margin-top:2px}
+  .note{color:var(--sub);font-size:13px;margin-top:10px}
+  .steps{display:grid;gap:12px;margin:26px 0}
+  .step{display:flex;gap:14px;align-items:flex-start;background:var(--card);
+        border:1px solid var(--line);border-radius:12px;padding:15px 18px}
+  .step .n{flex:0 0 32px;height:32px;border-radius:50%;
+           background:linear-gradient(135deg,var(--acc),var(--acc2));color:#fff8ee;
+           font-weight:800;display:flex;align-items:center;justify-content:center}
+  .step p{margin:2px 0 0;color:var(--sub);font-size:14px}
+  .warn{background:#fbf1e2;border-left:3px solid var(--amber,#d3a457);border-radius:8px;
+        padding:12px 16px;color:var(--ink);font-size:14px}
+  footer{color:var(--sub);font-size:12px;text-align:center;padding:32px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="logo">☕ 원격 지원 · PC 진단</div>
+    <p>기사가 원격으로 접속해 문제를 진단·해결해 드립니다.</p>
+  </header>
+
+  <section class="hero">
+    <h1>프로그램을 다운로드하고 실행하세요</h1>
+    <p class="lead">설치 과정 없이 실행하면 <b>접속 코드</b>가 나옵니다.
+       이 코드를 기사에게 알려주시면 원격 접속이 시작됩니다.</p>
+  </section>
+
+  <div class="dlwrap">
+    <a class="dl" href="/dl/RemoteSupport-Client.exe">원격 지원 프로그램 다운로드
+      <small>Windows · 실행만 하면 됩니다</small></a>
+    <div class="note">프로그램 실행 화면에서 간단한 이용 동의와 연락처를 확인합니다.</div>
+  </div>
+
+  <h2>사용 방법</h2>
+  <div class="steps">
+    <div class="step"><div class="n">1</div><div><b>다운로드 후 실행</b>
+      <p>받은 파일을 더블클릭하면 6자리 접속 코드가 표시됩니다.</p></div></div>
+    <div class="step"><div class="n">2</div><div><b>접속 코드 알려주기</b>
+      <p>화면의 6자리 코드를 기사에게 알려주세요.</p></div></div>
+    <div class="step"><div class="n">3</div><div><b>잠시 대기</b>
+      <p>연결되면 기사가 화면을 보며 도와드립니다.</p></div></div>
+    <div class="step"><div class="n">4</div><div><b>완료 후 종료</b>
+      <p>작업이 끝나면 프로그램을 닫아 언제든 종료할 수 있습니다.</p></div></div>
+  </div>
+
+  <h2>원격 지원 이용 안내</h2>
+  <ol class="terms">
+    <li><b>적법한 용도로만 사용</b> — 본 원격 지원은 정당한 기술 지원 목적으로만 사용되며,
+        타인의 기기 무단 접근 등 <b>불법적인 용도로 사용하지 않습니다.</b>
+        고객은 본인 소유이거나 정당한 권한이 있는 PC에 대해서만 지원을 요청합니다.</li>
+    <li><b>데이터 보호 한계</b> — 원격 지원 특성상 세션 중 화면·파일에 접근할 수 있어
+        <b>데이터의 완전한 보호를 보장할 수 없습니다.</b> 중요한 자료는 미리 백업해 주세요.</li>
+    <li><b>면책</b> — 원격 작업 중 또는 그로 인해 발생하는 데이터 손실·시스템 오류,
+        기기의 <b>치명적 결함(하드웨어 고장 등)으로 인한 문제에 대해 책임을 지지 않습니다.</b></li>
+    <li><b>세션 녹화(품질관리·분쟁대비)</b> — 원격 지원 세션은 <b>작업 기록·품질관리·분쟁 대비 목적</b>으로
+        기사 PC에 <b>녹화될 수 있습니다.</b></li>
+    <li><b>개인정보(전화번호) 수집·이용</b> — 원격 지원 <b>연락 및 본인확인 목적</b>으로 전화번호를 수집하며,
+        <b>지원 완료 후 파기(최대 6개월 보관)</b>합니다.</li>
+  </ol>
+  <p class="note">자세한 동의는 프로그램 실행 화면에서 진행합니다 — 위 내용은 사전 안내입니다.</p>
+
+  <h2>실행 시 경고가 뜨면</h2>
+  <div class="warn">“Windows가 PC를 보호했습니다” 창이 뜨면 <b>추가 정보 → 실행</b> 을 눌러주세요.
+    정상 프로그램입니다. (백신이 막으면 잠시 허용해 주세요.)</div>
+
+  <footer>© 원격 지원 · PC 진단 서비스</footer>
+</div>
+</body>
+</html>

@@ -20,6 +20,7 @@ import threading
 import time
 import tkinter as tk
 from tkinter import font as tkfont
+from tkinter import filedialog
 
 import mss
 from PIL import Image
@@ -39,6 +40,18 @@ from common import (
     MSG_CLIPBOARD, MSG_FILE_START, MSG_FILE_CHUNK, MSG_FILE_END,
     send_msg, TCPChannel, WSChannel,
 )
+
+# 디스플레이 배율(125%/150% 등)이 100%가 아니면, DPI-비인식 프로세스의 마우스 좌표(SetCursorPos)는
+# 논리 픽셀로 해석되어 mss 의 실제(물리) 픽셀 캡처와 어긋난다 → 원격 클릭 위치가 밀림.
+# 창 생성 전에 프로세스를 모니터별 DPI 인식으로 선언해 물리 픽셀 기준으로 맞춘다.
+try:
+    import ctypes
+    ctypes.windll.shcore.SetProcessDpiAwareness(2)  # PROCESS_PER_MONITOR_DPI_AWARE
+except Exception:
+    try:
+        ctypes.windll.user32.SetProcessDPIAware()
+    except Exception:
+        pass
 
 TILE = 128  # 델타 전송 타일 크기(px)
 
@@ -135,6 +148,7 @@ class HostApp:
         self.keyboard = KeyboardController()
         self.channel = None
         self.running = True
+        self.bridge = {}               # webrtc_app 이 send_file 함수를 넣어줌
         self._build_gui()
         self.screen_w = self.root.winfo_screenwidth()
         self.screen_h = self.root.winfo_screenheight()
@@ -178,11 +192,27 @@ class HostApp:
         tk.Label(self.root, textvariable=self.status_var, fg="#f9e2af",
                  bg="#1e1e2e").pack(pady=4)
 
+        if self.mode == "relay":       # 인터넷(P2P): 기사에게 파일 보내기
+            tk.Button(self.root, text="파일 보내기", command=self.send_file_action,
+                      bg="#89b4fa", fg="#11111b", relief="flat",
+                      padx=10, pady=4).pack(pady=(0, 4))
+
         tk.Button(self.root, text="연결 끊기 / 종료", command=self.shutdown,
                   bg="#f38ba8", fg="#11111b", relief="flat",
                   padx=10, pady=6).pack(pady=6)
 
         self.root.protocol("WM_DELETE_WINDOW", self.shutdown)
+
+    def send_file_action(self):
+        path = filedialog.askopenfilename(title="보낼 파일 선택")
+        if not path:
+            return
+        fn = self.bridge.get("send_file")
+        if fn:
+            fn(path)
+            self.set_status("파일 전송 중...")
+        else:
+            self.set_status("아직 연결 안 됨")
 
     def set_status(self, text):
         try:
@@ -210,7 +240,8 @@ class HostApp:
                 try:
                     await webrtc_app.host_run(
                         self.relay_url, self.pin, self._apply_input,
-                        self.set_status, lambda: self.running)
+                        self.set_status, lambda: self.running,
+                        bridge=self.bridge)
                 except Exception:
                     self.set_status("연결 오류, 재시도...")
                 if self.running:

@@ -20,6 +20,11 @@ MSG_FILE_START = 9 # 파일 전송 시작 : [4B 파일명길이][파일명(UTF-8
 MSG_FILE_CHUNK = 10# 파일 전송 데이터 청크 : [데이터바이트]
 MSG_FILE_END = 11  # 파일 전송 완료
 MSG_SIGNAL = 12    # 양방향 : WebRTC 시그널링(JSON) — {"kind":"offer"/"answer", "sdp":...}
+MSG_DIAG_REQUEST = 13  # viewer -> host : PC 진단 요청
+MSG_DIAG_REPORT = 14   # host -> viewer : 진단 리포트(HTML, UTF-8)
+MSG_CMD_REQUEST = 15   # viewer -> host : 원격 명령 실행 요청 (JSON {"shell":"cmd"/"powershell","cmd":"..."})
+MSG_CMD_RESULT = 16    # host -> viewer : 원격 명령 결과 (UTF-8 텍스트)
+MSG_CLIENT_INFO = 17   # host -> viewer : 연결 직후 자동 전송(고객정보+PC사양 요약, JSON UTF-8)
 
 
 _HEADER = struct.Struct(">BI")  # 타입(1) + 길이(4)
